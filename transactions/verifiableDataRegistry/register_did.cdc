@@ -20,10 +20,11 @@ transaction {
         let verificationMethodType = subjectKey.publicKey.signatureAlgorithm.rawValue
 
         let newDIDDocument <- VerifiableDataRegistry.registerDID(subjectAddress: self.subjectAddress, verificationPublicKey: verificationPublicKey, verificationMethodType: verificationMethodType)
+        let did = newDIDDocument.id
 
         let didVaultRef = self.didVaultCapability.borrow()!
         didVaultRef.addDID(didDocument: <-newDIDDocument)
 
-        log("DID registered")
+        log("new DID registered: ".concat(did))
     }
 }
