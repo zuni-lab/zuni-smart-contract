@@ -1,6 +1,6 @@
 import * as fcl from "@onflow/fcl";
-import * as fs from "fs";
 import flowJSON from "../flow.json";
+import { getDIDs, resolveDIDDocument } from "./scripts/verifiableDataRegistry";
 
 async function main() {
   fcl
@@ -10,21 +10,19 @@ async function main() {
     })
     .load({ flowJSON });
 
-  const result = await fcl.query({
-    cadence: `
-        pub fun main(a: Int, b: Int, addr: Address): Int {
-          log(addr)
-          return a + b
-        }
-      `,
-    args: (arg, t) => [
-      arg("7", t.Int), // a: Int
-      arg("6", t.Int), // b: Int
-      arg("0xba1132bc08f82fe2", t.Address), // addr: Address
-    ],
-  });
+  const address = "0xf8d6e0586b0a20c7";
 
-  console.log(result); // [Point{x:1, y:1}, Point{x:2, y:2}]
+  const dids = await getDIDs(address);
+  console.log(dids);
+
+  fcl
+    .config({
+      "flow.network": "local",
+      "accessNode.api": "http://localhost:8888",
+    })
+    .load({ flowJSON });
+  const didDocument = await resolveDIDDocument(address, dids[0]);
+  console.log(didDocument);
 }
 
 main().catch((error) => console.error(error.message));
