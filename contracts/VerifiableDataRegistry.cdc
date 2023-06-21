@@ -53,12 +53,55 @@ pub contract VerifiableDataRegistry {
             self.keyAgreement = [verificationKeyId]
         }
 
-        pub fun addVerificationMethod(verificationMethod: VerificationMethod) {
+        pub fun addVerificationMethod(_ verificationMethod: VerificationMethod) {
             self.verificationMethod.insert(key: verificationMethod.id, verificationMethod)
         }
 
-        pub fun removeVerificationMethod(verificationMethodId: String) {
+        pub fun removeVerificationMethod(_ verificationMethodId: String) {
             self.verificationMethod.remove(key: verificationMethodId)
+        }
+
+        pub fun addVerificationRelationships(
+            authentication: [String], 
+            assertionMethod: [String], 
+            keyAgreement: [String]
+        ) {
+            self.authentication.appendAll(authentication)
+            self.assertionMethod.appendAll(assertionMethod)
+            self.keyAgreement.appendAll(keyAgreement)
+        }
+
+        pub fun removeAuthenticationRelationship(
+            _ authenticationId: String,
+        ) {
+            for index, authen in self.authentication {
+                if authen == authenticationId {
+                    self.authentication.remove(at: index)
+                    break
+                }
+            }
+        }
+
+        pub fun removeAssertionRelationship(
+            _ assertionId: String,
+        ) {
+            for index, assertion in self.assertionMethod {
+                if assertion == assertionId {
+                    self.assertionMethod.remove(at: index)
+                    break
+                }
+            }
+        }
+
+        pub fun removeKeyAgreementRelationship(
+            _ keyAgreementId: String,
+        ) {
+            for index, keyAgreement in self.keyAgreement {
+                if keyAgreement == keyAgreementId {
+                    self.authentication.remove(at: index)
+                    break
+                }
+            }
         }
     }
 
@@ -72,6 +115,23 @@ pub contract VerifiableDataRegistry {
         pub fun addDID(didDocument: @DIDDocument)
 
         pub fun removeDID(did: String): @DIDDocument
+
+        pub fun addVerificationMethodForDID(did: String, verificationPublicKey: [UInt8], verificationMethodType: UInt8)
+
+        pub fun removeVerificationMethodForDID(did: String, verificationMethodId: String)
+
+        pub fun addVerificationRelationshipsForDID(
+            did: String,
+            authentication: [String], 
+            assertionMethod: [String],
+            keyAgreement: [String]
+        )
+
+        pub fun removeAuthenticationRelationship(did: String, authenticationId: String)
+
+        pub fun removeAssertionRelationship(did: String, assertionId: String)
+
+        pub fun removeKeyAgreementRelationship(did: String, keyAgreementId: String)
     }
 
     pub resource DIDVault: DIDAuthentication, DIDRepresentation {
@@ -94,6 +154,63 @@ pub contract VerifiableDataRegistry {
         ): @DIDDocument {
             let didDocument <- self.didDocuments.remove(key: did) ?? panic("DID not found")
             return <-didDocument
+        }
+
+        pub fun addVerificationMethodForDID(did: String, verificationPublicKey: [UInt8], verificationMethodType: UInt8) {
+            let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
+            let methodId = did.concat("#").concat(String.encodeHex(verificationPublicKey.slice(from: 0, upTo: 32)))
+            let verificationMethod = VerificationMethod(
+                id: methodId,
+                controller: did,
+                type: VerificationMethodType(rawValue: verificationMethodType)!,
+                publicKey: verificationPublicKey
+            )
+            didDocument.addVerificationMethod(verificationMethod)
+            self.didDocuments[did] <-! didDocument
+        }
+
+        pub fun removeVerificationMethodForDID(did: String, verificationMethodId: String) {
+            let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
+            didDocument.removeVerificationMethod(verificationMethodId)
+            self.didDocuments[did] <-! didDocument
+        }
+
+        pub fun addVerificationRelationshipsForDID(
+            did: String,
+            authentication: [String], 
+            assertionMethod: [String],
+            keyAgreement: [String]
+        ) {
+            let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
+            didDocument.addVerificationRelationships(authentication: authentication, assertionMethod: assertionMethod, keyAgreement: keyAgreement)
+            self.didDocuments[did] <-! didDocument
+        }
+
+        pub fun removeAuthenticationRelationship(
+            did: String,
+            authenticationId: String,
+        ) {
+            let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
+            didDocument.removeAuthenticationRelationship(authenticationId)
+            self.didDocuments[did] <-! didDocument
+        }
+
+        pub fun removeAssertionRelationship(
+            did: String,
+            assertionId: String,
+        ) {
+            let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
+            didDocument.removeAssertionRelationship(assertionId)
+            self.didDocuments[did] <-! didDocument
+        }
+
+        pub fun removeKeyAgreementRelationship(
+            did: String,
+            keyAgreementId: String,
+        ) {
+            let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
+            didDocument.removeKeyAgreementRelationship(keyAgreementId)
+            self.didDocuments[did] <-! didDocument
         }
 
         pub fun resolve(did: String): [String] {
@@ -127,8 +244,9 @@ pub contract VerifiableDataRegistry {
 
         self.CountDIDsOnAddress[subjectAddress] = nonce + 1
 
+        let methodId = did.concat("#").concat(String.encodeHex(verificationPublicKey.slice(from: 0, upTo: 32)))
         let verificationMethod = VerificationMethod(
-            id: did.concat("#keys-1"),
+            id: methodId,
             controller: did,
             type: VerificationMethodType(rawValue: verificationMethodType)!,
             publicKey: verificationPublicKey
