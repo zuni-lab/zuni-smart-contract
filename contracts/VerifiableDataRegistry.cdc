@@ -3,8 +3,9 @@ pub contract VerifiableDataRegistry {
     pub let DIDVaultStoragePath: StoragePath
     pub let DIDVaultPrivatePath: PrivatePath
     pub let DIDVaultPublicPath: PublicPath
-
     pub let CountDIDsOnAddress: {Address: Int32}
+
+    pub event DIDRegistered(did: String)
 
     pub enum VerificationMethodType: UInt8 {
         pub case ECDSA_P256
@@ -17,7 +18,6 @@ pub contract VerifiableDataRegistry {
         pub let type: VerificationMethodType
         pub let controller: String
         pub let publicKey: [UInt8]
-
 
         init(id: String, controller: String, type: VerificationMethodType, publicKey: [UInt8]) {
             self.id = id
@@ -258,6 +258,9 @@ pub contract VerifiableDataRegistry {
             alsoKnownAs: [],
             verificationMethod: verificationMethod
         )
+
+        emit DIDRegistered(did: did)
+
         return <-didDocument
     }
 

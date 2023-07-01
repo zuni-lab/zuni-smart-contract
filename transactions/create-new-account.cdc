@@ -1,6 +1,5 @@
-import "VerifiableDataRegistry"
-import FungibleToken from 0xee82856bf20e2aa6
-import FlowToken from 0x0ae53cb6e3f42a79
+import "FungibleToken"
+import "FlowToken"
 
 transaction(publicKey: String, signatureAlgo: UInt8, hashAlgo: UInt8) {    
     let sentVault: @FungibleToken.Vault
@@ -17,7 +16,6 @@ transaction(publicKey: String, signatureAlgo: UInt8, hashAlgo: UInt8) {
             weight: 1000.0
         )
         self.newAddress = newAccount.address
-        log("New account created: ".concat(self.newAddress.toString()))
 
         let vault = creator.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) 
             ?? panic("Could not borrow reference to the owner's Vault!")
@@ -39,5 +37,7 @@ transaction(publicKey: String, signatureAlgo: UInt8, hashAlgo: UInt8) {
 
         // Deposit the withdrawn tokens in the recipient's receiver
         receiver.deposit(from: <-self.sentVault)
+        
+        log("New account created: ".concat(self.newAddress.toString()))
     }
 }
