@@ -20,6 +20,8 @@ pub contract DIDViews {
                     self.type = "ECDSA_secp256k1"
                 case VerifiableDataRegistry.VerificationMethodType.BLS_BLS12_381:
                     self.type = "BLS_BLS12_381"
+                case VerifiableDataRegistry.VerificationMethodType.Unknown:
+                    self.type = "Unknown"
                 default:
                     self.type = "Unknown"
             }

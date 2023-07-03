@@ -8,6 +8,7 @@ pub contract VerifiableDataRegistry {
     pub event DIDRegistered(did: String)
 
     pub enum VerificationMethodType: UInt8 {
+        pub case Unknown
         pub case ECDSA_P256
         pub case ECDSA_secp256k1
         pub case BLS_BLS12_381

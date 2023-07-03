@@ -3,7 +3,7 @@
 		"DIDViews": {
 			"source": "contracts/DIDViews.cdc",
 			"aliases": {
-				"testnet": "7881f00fb0c75c92"
+				"testnet": "3627d9fd38ed67d4"
 			}
 		},
 		"ExampleNFT": {
@@ -58,7 +58,7 @@
 		"VerifiableDataRegistry": {
 			"source": "contracts/VerifiableDataRegistry.cdc",
 			"aliases": {
-				"testnet": "7881f00fb0c75c92"
+				"testnet": "3627d9fd38ed67d4"
 			}
 		}
 	},
@@ -69,7 +69,7 @@
 	},
 	"accounts": {
 		"default": {
-			"address": "120e725050340cab",
+			"address": "e03daebed8ca0615",
 			"key": "6d12eebfef9866c9b6fa92b97c6e705c26a1785b1e7944da701fc545a51d4673"
 		},
 		"emulator-account": {
@@ -77,7 +77,7 @@
 			"key": "6d12eebfef9866c9b6fa92b97c6e705c26a1785b1e7944da701fc545a51d4673"
 		},
 		"testnet-acc": {
-			"address": "7881f00fb0c75c92",
+			"address": "3627d9fd38ed67d4",
 			"key": {
 				"type": "file",
 				"location": "./testnet.key"
