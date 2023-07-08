@@ -51,10 +51,15 @@
 		"VerifiableDataRegistry": {
 			"source": "contracts/VerifiableDataRegistry.cdc",
 			"aliases": {
-				"testnet": "3627d9fd38ed67d4"
+				"testnet": "1f0fbe1ac80aefe1"
 			}
 		},
-		"VerifiableDataView": "contracts/VerifiableDataView.cdc"
+		"VerifiableDataView": {
+			"source": "contracts/VerifiableDataView.cdc",
+			"aliases": {
+				"testnet": "1f0fbe1ac80aefe1"
+			}
+		}
 	},
 	"networks": {
 		"emulator": "127.0.0.1:3569",
@@ -70,11 +75,18 @@
 			"address": "f8d6e0586b0a20c7",
 			"key": "6d12eebfef9866c9b6fa92b97c6e705c26a1785b1e7944da701fc545a51d4673"
 		},
-		"testnet-acc": {
+		"testnet-acc-1": {
 			"address": "3627d9fd38ed67d4",
 			"key": {
 				"type": "file",
-				"location": "./testnet.key"
+				"location": "./testnet-1.key"
+			}
+		},
+		"testnet-acc-2": {
+			"address": "1f0fbe1ac80aefe1",
+			"key": {
+				"type": "file",
+				"location": "./testnet-2.key"
 			}
 		}
 	},
@@ -86,7 +98,7 @@
 			]
 		},
 		"testnet": {
-			"testnet-acc": [
+			"testnet-acc-2": [
 				"VerifiableDataRegistry",
 				"VerifiableDataView"
 			]
