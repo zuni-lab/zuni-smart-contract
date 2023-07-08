@@ -1,11 +1,5 @@
 {
 	"contracts": {
-		"DIDViews": {
-			"source": "contracts/DIDViews.cdc",
-			"aliases": {
-				"testnet": "3627d9fd38ed67d4"
-			}
-		},
 		"ExampleNFT": {
 			"source": "",
 			"aliases": {
@@ -54,13 +48,13 @@
 				"emulator": "f8d6e0586b0a20c7"
 			}
 		},
-		"TrustedNetwork": "contracts/TrustedNetwork.cdc",
 		"VerifiableDataRegistry": {
 			"source": "contracts/VerifiableDataRegistry.cdc",
 			"aliases": {
 				"testnet": "3627d9fd38ed67d4"
 			}
-		}
+		},
+		"VerifiableDataView": "contracts/VerifiableDataView.cdc"
 	},
 	"networks": {
 		"emulator": "127.0.0.1:3569",
@@ -87,15 +81,14 @@
 	"deployments": {
 		"emulator": {
 			"default": [
-				"DIDViews",
-				"TrustedNetwork",
-				"VerifiableDataRegistry"
+				"VerifiableDataRegistry",
+				"VerifiableDataView"
 			]
 		},
 		"testnet": {
 			"testnet-acc": [
-				"DIDViews",
-				"VerifiableDataRegistry"
+				"VerifiableDataRegistry",
+				"VerifiableDataView"
 			]
 		}
 	}

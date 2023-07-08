@@ -1,14 +1,18 @@
 #!/bin/bash
 
-# flow transactions send transactions/verifiableDataRegistry/create_empty_did_vault.cdc
-# flow transactions send transactions/verifiableDataRegistry/register_did.cdc
+ISSUER_ADDRESS="0xf8d6e0586b0a20c7"
+ISSUER_DID="did:flow:9ef20515862a6a698d06a69cdf99d3f5"
+VC_ID="12"
+HOLDER_DID="did:flow:1234"
 
-DID="did:flow:30e9a7a97a01bd88f3523057e523"
-PUBLIC_KEY="4c8fbd44abd7c60c705a38f47138ca23a4edf32ca7ba477e551b1e3577dfbd07e133706f3429ac3992d9aa1f86ffc2f5ed27891ad7070600649fd66964b24d12"
-SIGNATURE_ALGORITHM="2"
+flow transactions send transactions/did/create-empty-did-vault.cdc
+flow transactions send transactions/did/register-did.cdc 00cebc2791069a2ada8a5c105a7d12c065931abddd359db4c8582215282916153e14451da6a722b3fc204ad6d9fe3679043d8384028e7891962e9c167ee72cf6 2
 
+flow scripts execute scripts/did/get-dids.cdc $ISSUER_ADDRESS
+flow scripts execute scripts/did/resolve-did-document.cdc $ISSUER_ADDRESS $ISSUER_DID
 
-flow transactions send transactions/verifiableDataRegistry/add_verification_method.cdc $DID $PUBLIC_KEY $SIGNATURE_ALGORITHM
+flow transactions send transactions/vc/create-empty-vc-vault.cdc
+flow transactions send transactions/vc/issue-vc.cdc $ISSUER_DID $VC_ID $HOLDER_DID
 
-# METHOD_ID="did:flow:30e9a7a97a01bd88f3523057e5234c8fbd44abd2160c705a38f47138ca23a4edf32ca7ba477e551b1e3577dfbd07"
-# flow transactions send transactions/verifiableDataRegistry/remove_verification_method.cdc $DID $PUBLIC_KEY $METHOD_ID
+flow scripts execute scripts/vc/get-vc-list-by-did.cdc $ISSUER_ADDRESS $ISSUER_DID
+flow scripts execute scripts/vc/get-vc.cdc $ISSUER_ADDRESS $ISSUER_DID $VC_ID

@@ -1,17 +1,25 @@
 pub contract VerifiableDataRegistry {
-    pub let DIDPrefix: String
     pub let DIDVaultStoragePath: StoragePath
     pub let DIDVaultPrivatePath: PrivatePath
     pub let DIDVaultPublicPath: PublicPath
+    pub let RevocableVCVaultStoragePath: StoragePath
+    pub let RevocableVCVaultPrivatePath: PrivatePath
+    pub let RevocableVCVaultPublicPath: PublicPath
     pub let CountDIDsOnAddress: {Address: Int32}
 
     pub event DIDRegistered(did: String)
+    pub event RevocableVCIssued(issuerDID: String, id: String)
+    pub event RevocableVCRevoked(issuerDID: String, id: String)
 
     pub enum VerificationMethodType: UInt8 {
         pub case Unknown
         pub case ECDSA_P256
         pub case ECDSA_secp256k1
         pub case BLS_BLS12_381
+    }
+    pub enum VCStatus: UInt8 {
+        pub case Issued
+        pub case Revoked
     }
     
     pub struct VerificationMethod {
@@ -28,7 +36,103 @@ pub contract VerifiableDataRegistry {
         }
     }
 
-    pub resource DIDDocument {
+    pub struct RevocableVC {
+        pub let id: String
+        pub let holderDID: String
+        pub var status: VCStatus
+
+        init(id: String, holderDID: String, status: VCStatus) {
+            self.id = id
+            self.holderDID = holderDID
+            self.status = status
+        }
+
+        pub fun revoke() {
+            if self.status == VCStatus.Issued {
+                self.status = VCStatus.Revoked
+            }
+        }
+    }
+
+    pub struct RevocableVCList {
+        pub let issuerDID: String
+        pub let revocableVC: {String: RevocableVC}
+
+        init(issuerDID: String) {
+            self.issuerDID = issuerDID
+            self.revocableVC = {}
+        }
+
+        pub fun issueRevocableVC(id: String, holderDID: String) {
+            if self.revocableVC[id] != nil {
+                panic("Revocable VC already exists")
+            }
+            let revocableVC = RevocableVC(
+                id: id,
+                holderDID: holderDID,
+                status: VCStatus.Issued
+            )
+            self.revocableVC[id] = revocableVC
+        }
+
+        pub fun revokeRevocableVC(id: String) {
+            if self.revocableVC[id] == nil {
+                panic("Revocable VC not found")
+            }
+            self.revocableVC[id]?.revoke()
+        }
+
+        pub fun getRevocableVC(id: String): RevocableVC? {
+            return self.revocableVC[id]
+        }
+
+        pub fun getRevocableVCList(): [RevocableVC] {
+            return self.revocableVC.values
+        }
+    }
+
+    pub resource interface DIDRepresentation {
+        pub fun getDIDs(): [String]
+
+        pub fun resolveDIDDocument(did: String): &DIDDocument?
+    }
+
+    pub resource interface DIDAuthentication  {
+        pub fun addDID(didDocument: @DIDDocument)
+        
+        pub fun removeDID(did: String): @DIDDocument
+
+        pub fun addVerificationMethodForDID(did: String, verificationPublicKey: [UInt8], verificationMethodType: UInt8)
+
+        pub fun removeVerificationMethodForDID(did: String, verificationMethodId: String)
+
+        pub fun addVerificationRelationshipsForDID(
+            did: String,
+            authentication: [String], 
+            assertionMethod: [String],
+            keyAgreement: [String]
+        )
+
+        pub fun removeAuthenticationRelationship(did: String, authenticationId: String)
+
+        pub fun removeAssertionRelationship(did: String, assertionId: String)
+
+        pub fun removeKeyAgreementRelationship(did: String, keyAgreementId: String)
+    }
+
+     pub resource interface RevocableVCVaultRepresentation {
+        pub fun getRevocableVC(issuerDID: String, id: String): RevocableVC?
+
+        pub fun getRevocableVCList(issuerDID: String): [RevocableVC]
+    }
+
+    pub resource interface RevocableVCVaultOwner  {
+        pub fun issueRevocableVC(issuerAddress: Address, issuerDID: String, id: String, holderDID: String)
+        
+        pub fun revokeRevocableVC(issuerAddress: Address, issuerDID: String, id: String)
+    }
+
+    pub resource DIDDocument {  
         pub let id: String
         pub let controller: String
         pub let alsoKnownAs: [String]
@@ -106,35 +210,6 @@ pub contract VerifiableDataRegistry {
         }
     }
 
-    pub resource interface DIDRepresentation {
-        pub fun getDIDs(): [String]
-
-        pub fun resolveDIDDocument(did: String): &DIDDocument?
-    }
-
-    pub resource interface DIDAuthentication  {
-        pub fun addDID(didDocument: @DIDDocument)
-
-        pub fun removeDID(did: String): @DIDDocument
-
-        pub fun addVerificationMethodForDID(did: String, verificationPublicKey: [UInt8], verificationMethodType: UInt8)
-
-        pub fun removeVerificationMethodForDID(did: String, verificationMethodId: String)
-
-        pub fun addVerificationRelationshipsForDID(
-            did: String,
-            authentication: [String], 
-            assertionMethod: [String],
-            keyAgreement: [String]
-        )
-
-        pub fun removeAuthenticationRelationship(did: String, authenticationId: String)
-
-        pub fun removeAssertionRelationship(did: String, assertionId: String)
-
-        pub fun removeKeyAgreementRelationship(did: String, keyAgreementId: String)
-    }
-
     pub resource DIDVault: DIDAuthentication, DIDRepresentation {
         pub let didDocuments: @{String: DIDDocument}
 
@@ -158,7 +233,13 @@ pub contract VerifiableDataRegistry {
         }
 
         pub fun addVerificationMethodForDID(did: String, verificationPublicKey: [UInt8], verificationMethodType: UInt8) {
-            let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
+           pre {
+                self.didDocuments[did] != nil
+                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
+                    "Only the controller can modify DID document"
+            }
+
+            let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found") 
             let methodId = did.concat("#").concat(String.encodeHex(verificationPublicKey.slice(from: 0, upTo: 32)))
             let verificationMethod = VerificationMethod(
                 id: methodId,
@@ -171,6 +252,12 @@ pub contract VerifiableDataRegistry {
         }
 
         pub fun removeVerificationMethodForDID(did: String, verificationMethodId: String) {
+            pre {
+                self.didDocuments[did] != nil
+                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
+                    "Only the controller can modify DID document"
+            }
+
             let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
             didDocument.removeVerificationMethod(verificationMethodId)
             self.didDocuments[did] <-! didDocument
@@ -182,6 +269,12 @@ pub contract VerifiableDataRegistry {
             assertionMethod: [String],
             keyAgreement: [String]
         ) {
+            pre {
+                self.didDocuments[did] != nil
+                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
+                    "Only the controller can modify DID documents"
+            }
+
             let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
             didDocument.addVerificationRelationships(authentication: authentication, assertionMethod: assertionMethod, keyAgreement: keyAgreement)
             self.didDocuments[did] <-! didDocument
@@ -191,6 +284,12 @@ pub contract VerifiableDataRegistry {
             did: String,
             authenticationId: String,
         ) {
+            pre {
+                self.didDocuments[did] != nil
+                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
+                    "Only the controller can modify DID documents"
+            }
+
             let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
             didDocument.removeAuthenticationRelationship(authenticationId)
             self.didDocuments[did] <-! didDocument
@@ -200,6 +299,12 @@ pub contract VerifiableDataRegistry {
             did: String,
             assertionId: String,
         ) {
+            pre {
+                self.didDocuments[did] != nil
+                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
+                    "Only the controller can modify DID documents"
+            }
+
             let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
             didDocument.removeAssertionRelationship(assertionId)
             self.didDocuments[did] <-! didDocument
@@ -209,6 +314,12 @@ pub contract VerifiableDataRegistry {
             did: String,
             keyAgreementId: String,
         ) {
+            pre {
+                self.didDocuments[did] != nil
+                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
+                    "Only the controller can modify DID documents"
+            }
+
             let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
             didDocument.removeKeyAgreementRelationship(keyAgreementId)
             self.didDocuments[did] <-! didDocument
@@ -233,22 +344,102 @@ pub contract VerifiableDataRegistry {
         }
     }
 
+    pub resource RevocableVCVault: RevocableVCVaultOwner, RevocableVCVaultRepresentation {
+        pub let revocableVCListByDID: {String: RevocableVCList}
+
+        init() {
+            self.revocableVCListByDID = {}
+        }
+
+        pub fun issueRevocableVC(
+            issuerAddress: Address,
+            issuerDID: String,
+            id: String,
+            holderDID: String
+        ) {
+            let account = getAccount(issuerAddress)
+            let didVaultCapability = account.getCapability<&{VerifiableDataRegistry.DIDRepresentation}>(VerifiableDataRegistry.DIDVaultPublicPath)
+            let didVaultRef = didVaultCapability.borrow()
+            if didVaultRef == nil {
+                panic("Not found DID Vault")
+            }
+            let dids = didVaultRef!.getDIDs()
+            if !dids.contains(issuerDID) {
+                panic("Not own this DID")
+            }
+            
+            if self.revocableVCListByDID[issuerDID] == nil {
+                let revocableVCs = RevocableVCList(
+                    issuerDID: issuerDID
+                )
+                self.revocableVCListByDID[issuerDID] = revocableVCs
+            }
+            self.revocableVCListByDID[issuerDID]?.issueRevocableVC(
+                id: id,
+                holderDID: holderDID
+            )
+        }
+
+        pub fun revokeRevocableVC(
+            issuerAddress: Address,
+            issuerDID: String,
+            id: String
+        ) {
+            let account = getAccount(issuerAddress)
+            let didVaultCapability = account.getCapability<&{VerifiableDataRegistry.DIDRepresentation}>(VerifiableDataRegistry.DIDVaultPublicPath)
+            let didVaultRef = didVaultCapability.borrow()
+            if didVaultRef == nil {
+                panic("Not found DID Vault")
+            }
+            let dids = didVaultRef!.getDIDs()
+            if !dids.contains(issuerDID) {
+                panic("Not own this DID")
+            }
+
+            if self.revocableVCListByDID[issuerDID] == nil {
+                panic("Not found Revocable VC List")
+            }
+            self.revocableVCListByDID[issuerDID]?.revokeRevocableVC(
+                id: id,
+            )
+        }
+
+        pub fun getRevocableVC(issuerDID: String, id: String): RevocableVC? {
+            if self.revocableVCListByDID[issuerDID] == nil {
+                return nil
+            }
+            return self.revocableVCListByDID[issuerDID]!.getRevocableVC(id: id)
+        }
+
+        pub fun getRevocableVCList(issuerDID: String): [RevocableVC] {
+            if self.revocableVCListByDID[issuerDID] == nil {
+                return []
+            }
+            return self.revocableVCListByDID[issuerDID]!.getRevocableVCList()
+        }
+    }
+
     pub fun createEmptyDIDVault(): @DIDVault {
         return <-create DIDVault()
+    }
+
+    pub fun createEmptyRevocationVault(): @RevocableVCVault {
+        return <-create RevocableVCVault()
     }
 
     pub fun registerDID(subjectAddress: Address, verificationPublicKey: [UInt8], verificationMethodType: UInt8): @DIDDocument {
         let nonce = self.CountDIDsOnAddress[subjectAddress] ?? 0
         let digest = HashAlgorithm.SHA2_256.hashWithTag(nonce.toBigEndianBytes(), tag: subjectAddress.toString())
-        let identity = String.encodeHex(digest.slice(from: 0, upTo: 14))
-        let did = self.DIDPrefix.concat(identity)
+        let did = String.encodeHex(digest.slice(from: 0, upTo: 16))
 
         self.CountDIDsOnAddress[subjectAddress] = nonce + 1
+
+        let controller = self.account.address.toString()
 
         let methodId = did.concat("#").concat(String.encodeHex(verificationPublicKey.slice(from: 0, upTo: 32)))
         let verificationMethod = VerificationMethod(
             id: methodId,
-            controller: did,
+            controller: controller,
             type: VerificationMethodType(rawValue: verificationMethodType)!,
             publicKey: verificationPublicKey
         )
@@ -266,12 +457,15 @@ pub contract VerifiableDataRegistry {
     }
 
     init() {
-        self.DIDPrefix = "did:flow:"
-
         let didVaultIdentifier = "didVault"
         self.DIDVaultStoragePath = StoragePath(identifier: didVaultIdentifier)!
         self.DIDVaultPrivatePath = PrivatePath(identifier: didVaultIdentifier)!
         self.DIDVaultPublicPath = PublicPath(identifier: didVaultIdentifier)!
+
+        let revocableVCVaultIdentifier = "revocableVCVault"
+        self.RevocableVCVaultStoragePath = StoragePath(identifier: revocableVCVaultIdentifier)!
+        self.RevocableVCVaultPrivatePath = PrivatePath(identifier: revocableVCVaultIdentifier)!
+        self.RevocableVCVaultPublicPath = PublicPath(identifier: revocableVCVaultIdentifier)!
         
         self.CountDIDsOnAddress = {}
     }
