@@ -6,7 +6,7 @@ transaction(issuerDID: String, id: String) {
     
     prepare(account: AuthAccount) {
         self.issuerAddress = account.address
-        self.vcVaultOwnerCap = account.getCapability<&{VerifiableDataRegistry.RevocableVCVaultOwner}>(VerifiableDataRegistry.RevocableVCVaultPublicPath)    
+        self.vcVaultOwnerCap = account.getCapability<&{VerifiableDataRegistry.RevocableVCVaultOwner}>(VerifiableDataRegistry.RevocableVCVaultPrivatePath)    
     }
 
     pre {
@@ -15,8 +15,10 @@ transaction(issuerDID: String, id: String) {
 
     execute {
         let vcVaultAuthRef = self.vcVaultOwnerCap.borrow()!
-        vcVaultAuthRef.revokeRevocableVC(issuerAddress: self.issuerAddress, issuerDID: issuerDID, id: id)
+        let didPrefixLength = "did:flow:".length
+        let removedPrefixDID = issuerDID.slice(from: didPrefixLength, upTo: issuerDID.length)
+        vcVaultAuthRef.revokeRevocableVC(issuerAddress: self.issuerAddress, issuerDID: removedPrefixDID, id: id)
 
-        log("Issued VC: ".concat(id))
+        log("Revoked VC: ".concat(id))
     }
 }
