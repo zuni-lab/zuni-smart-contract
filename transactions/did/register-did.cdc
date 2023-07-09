@@ -1,6 +1,6 @@
 import "VerifiableDataRegistry"
 
-transaction(verificationPublicKey: String, verificationMethodType: UInt8) {
+transaction(keyId: String, verificationPublicKey: String, verificationMethodType: UInt8) {
     let didVaultCapability: Capability<&{VerifiableDataRegistry.DIDAuthentication}>
     let subjectAddress: Address
 
@@ -15,7 +15,12 @@ transaction(verificationPublicKey: String, verificationMethodType: UInt8) {
 
     execute {
         let subjectAccount = getAccount(self.subjectAddress)
-        let newDIDDocument <- VerifiableDataRegistry.registerDID(subjectAddress: self.subjectAddress, verificationPublicKey: verificationPublicKey.decodeHex(), verificationMethodType: verificationMethodType)
+        let newDIDDocument <- VerifiableDataRegistry.registerDID(
+            subjectAddress: self.subjectAddress, 
+            keyId: keyId,
+            verificationPublicKey: verificationPublicKey.decodeHex(), 
+            verificationMethodType: verificationMethodType
+        )
         let did = newDIDDocument.id
 
         let didVaultRef = self.didVaultCapability.borrow()!

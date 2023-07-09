@@ -6,6 +6,7 @@ pub contract VerifiableDataRegistry {
     pub let RevocableVCVaultPrivatePath: PrivatePath
     pub let RevocableVCVaultPublicPath: PublicPath
     pub let CountDIDsOnAddress: {Address: Int32}
+    pub let mapDIDToWallet: {String: Address}
 
     pub event DIDRegistered(did: String)
     pub event RevocableVCIssued(issuerDID: String, id: String)
@@ -102,15 +103,20 @@ pub contract VerifiableDataRegistry {
         
         pub fun removeDID(did: String): @DIDDocument
 
-        pub fun addVerificationMethodForDID(did: String, verificationPublicKey: [UInt8], verificationMethodType: UInt8)
+        pub fun addVerificationMethodForDID(
+            did: String, 
+            keyId: String, 
+            verificationPublicKey: [UInt8], 
+            verificationMethodType: UInt8
+        )
 
         pub fun removeVerificationMethodForDID(did: String, verificationMethodId: String)
 
         pub fun addVerificationRelationshipsForDID(
             did: String,
-            authentication: [String], 
-            assertionMethod: [String],
-            keyAgreement: [String]
+            authentication: String?, 
+            assertionMethod: String?,
+            keyAgreement: String?
         )
 
         pub fun removeAuthenticationRelationship(did: String, authenticationId: String)
@@ -159,25 +165,49 @@ pub contract VerifiableDataRegistry {
         }
 
         pub fun addVerificationMethod(_ verificationMethod: VerificationMethod) {
+            let key = verificationMethod.id
+            if self.verificationMethod[key] != nil {
+                panic("Verification method already exists")
+            }
+
             self.verificationMethod.insert(key: verificationMethod.id, verificationMethod)
         }
 
         pub fun removeVerificationMethod(_ verificationMethodId: String) {
+            if self.verificationMethod[verificationMethodId] == nil {
+                panic("Verification method does not exist")
+            }
+
             self.verificationMethod.remove(key: verificationMethodId)
         }
 
         pub fun addVerificationRelationships(
-            authentication: [String], 
-            assertionMethod: [String], 
-            keyAgreement: [String]
+            authentication: String?, 
+            assertionMethod: String?, 
+            keyAgreement: String?
         ) {
-            self.authentication.appendAll(authentication)
-            self.assertionMethod.appendAll(assertionMethod)
-            self.keyAgreement.appendAll(keyAgreement)
+            if authentication != nil {
+                if self.authentication.contains(authentication!) {
+                    panic("Authentication relationship already exists")
+                }
+                self.authentication.append(authentication!)
+            }
+            if assertionMethod != nil {
+                if self.assertionMethod.contains(assertionMethod!) {
+                    panic("assertionMethod relationship already exists")
+                }
+                self.assertionMethod.append(assertionMethod!)
+            }
+            if keyAgreement != nil {
+                if self.keyAgreement.contains(keyAgreement!) {
+                    panic("keyAgreement relationship already exists")
+                }
+                self.keyAgreement.append(keyAgreement!)
+            }
         }
 
         pub fun removeAuthenticationRelationship(
-            _ authenticationId: String,
+            authenticationId: String,
         ) {
             for index, authen in self.authentication {
                 if authen == authenticationId {
@@ -188,7 +218,7 @@ pub contract VerifiableDataRegistry {
         }
 
         pub fun removeAssertionRelationship(
-            _ assertionId: String,
+            assertionId: String,
         ) {
             for index, assertion in self.assertionMethod {
                 if assertion == assertionId {
@@ -199,7 +229,7 @@ pub contract VerifiableDataRegistry {
         }
 
         pub fun removeKeyAgreementRelationship(
-            _ keyAgreementId: String,
+            keyAgreementId: String,
         ) {
             for index, keyAgreement in self.keyAgreement {
                 if keyAgreement == keyAgreementId {
@@ -232,15 +262,13 @@ pub contract VerifiableDataRegistry {
             return <-didDocument
         }
 
-        pub fun addVerificationMethodForDID(did: String, verificationPublicKey: [UInt8], verificationMethodType: UInt8) {
+        pub fun addVerificationMethodForDID(did: String, keyId: String, verificationPublicKey: [UInt8], verificationMethodType: UInt8) {
            pre {
                 self.didDocuments[did] != nil
-                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
-                    "Only the controller can modify DID document"
             }
 
             let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found") 
-            let methodId = did.concat("#").concat(String.encodeHex(verificationPublicKey.slice(from: 0, upTo: 32)))
+            let methodId = did.concat("#").concat(keyId)
             let verificationMethod = VerificationMethod(
                 id: methodId,
                 controller: did,
@@ -254,8 +282,6 @@ pub contract VerifiableDataRegistry {
         pub fun removeVerificationMethodForDID(did: String, verificationMethodId: String) {
             pre {
                 self.didDocuments[did] != nil
-                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
-                    "Only the controller can modify DID document"
             }
 
             let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
@@ -265,14 +291,12 @@ pub contract VerifiableDataRegistry {
 
         pub fun addVerificationRelationshipsForDID(
             did: String,
-            authentication: [String], 
-            assertionMethod: [String],
-            keyAgreement: [String]
+            authentication: String?, 
+            assertionMethod: String?,
+            keyAgreement: String?
         ) {
             pre {
                 self.didDocuments[did] != nil
-                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
-                    "Only the controller can modify DID documents"
             }
 
             let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
@@ -286,12 +310,10 @@ pub contract VerifiableDataRegistry {
         ) {
             pre {
                 self.didDocuments[did] != nil
-                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
-                    "Only the controller can modify DID documents"
             }
 
             let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
-            didDocument.removeAuthenticationRelationship(authenticationId)
+            didDocument.removeAuthenticationRelationship(authenticationId: authenticationId)
             self.didDocuments[did] <-! didDocument
         }
 
@@ -301,12 +323,10 @@ pub contract VerifiableDataRegistry {
         ) {
             pre {
                 self.didDocuments[did] != nil
-                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
-                    "Only the controller can modify DID documents"
             }
 
             let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
-            didDocument.removeAssertionRelationship(assertionId)
+            didDocument.removeAssertionRelationship(assertionId: assertionId)
             self.didDocuments[did] <-! didDocument
         }
 
@@ -316,12 +336,10 @@ pub contract VerifiableDataRegistry {
         ) {
             pre {
                 self.didDocuments[did] != nil
-                self.didDocuments[did]?.controller == self.owner?.address?.toString(): 
-                    "Only the controller can modify DID documents"
             }
 
             let didDocument <-self.didDocuments.remove(key: did) ?? panic("DID not found")
-            didDocument.removeKeyAgreementRelationship(keyAgreementId)
+            didDocument.removeKeyAgreementRelationship(keyAgreementId: keyAgreementId)
             self.didDocuments[did] <-! didDocument
         }
 
@@ -427,16 +445,13 @@ pub contract VerifiableDataRegistry {
         return <-create RevocableVCVault()
     }
 
-    pub fun registerDID(subjectAddress: Address, verificationPublicKey: [UInt8], verificationMethodType: UInt8): @DIDDocument {
+    pub fun registerDID(subjectAddress: Address, keyId: String, verificationPublicKey: [UInt8], verificationMethodType: UInt8): @DIDDocument {
         let nonce = self.CountDIDsOnAddress[subjectAddress] ?? 0
         let digest = HashAlgorithm.SHA2_256.hashWithTag(nonce.toBigEndianBytes(), tag: subjectAddress.toString())
         let did = String.encodeHex(digest.slice(from: 0, upTo: 16))
 
-        self.CountDIDsOnAddress[subjectAddress] = nonce + 1
-
         let controller = self.account.address.toString()
-
-        let methodId = did.concat("#").concat(String.encodeHex(verificationPublicKey.slice(from: 0, upTo: 32)))
+        let methodId = did.concat("#").concat(keyId)
         let verificationMethod = VerificationMethod(
             id: methodId,
             controller: controller,
@@ -446,10 +461,12 @@ pub contract VerifiableDataRegistry {
         
         let didDocument <- create DIDDocument(
             id: did,
-            controller: did,
+            controller: controller,
             alsoKnownAs: [],
             verificationMethod: verificationMethod
         )
+        self.mapDIDToWallet[did] = subjectAddress
+        self.CountDIDsOnAddress[subjectAddress] = nonce + 1
 
         emit DIDRegistered(did: did)
 
@@ -468,5 +485,6 @@ pub contract VerifiableDataRegistry {
         self.RevocableVCVaultPublicPath = PublicPath(identifier: revocableVCVaultIdentifier)!
         
         self.CountDIDsOnAddress = {}
+        self.mapDIDToWallet = {}
     }
 }

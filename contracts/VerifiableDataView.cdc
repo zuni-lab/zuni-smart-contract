@@ -11,9 +11,9 @@ pub contract VerifiableDataView {
         pub let publicKey: String
 
 
-        init(verificationMethod: VerifiableDataRegistry.VerificationMethod, didPrefix: String) {
-            self.id = didPrefix.concat(verificationMethod.id)
-            self.controller = verificationMethod.controller
+        init(verificationMethod: VerifiableDataRegistry.VerificationMethod) {
+            self.id = VerifiableDataView.DIDPredix.concat(verificationMethod.id)
+            self.controller = VerifiableDataView.ControllerPrefix.concat(verificationMethod.controller)
             self.publicKey = String.encodeHex(verificationMethod.publicKey)   
 
             switch verificationMethod.type {
@@ -35,7 +35,7 @@ pub contract VerifiableDataView {
         pub let id: String
         pub let controller: String
         pub let alsoKnownAs: [String]
-        pub let verificationMethod: {String: VerificationMethodView}
+        pub let verificationMethod: [VerificationMethodView]
         pub let authentication: [String]
         pub let assertionMethod: [String]
         pub let keyAgreement: [String]
@@ -48,14 +48,13 @@ pub contract VerifiableDataView {
             self.controller = controllerPrefix.concat(didDocument.controller)
             self.alsoKnownAs = didDocument.alsoKnownAs
 
-            self.verificationMethod = {}
+            self.verificationMethod = []
             didDocument.verificationMethod.forEachKey(fun (key: String): Bool {
                 let verificationMethodView = VerificationMethodView(
-                    verificationMethod: didDocument.verificationMethod[key]!,
-                    didPrefix: didPrefix
+                    verificationMethod: didDocument.verificationMethod[key]!
                 )
                 let keyDID = didPrefix.concat(key)
-                self.verificationMethod.insert(key: keyDID, verificationMethodView)
+                self.verificationMethod.append(verificationMethodView)
 
                 return true
             })
