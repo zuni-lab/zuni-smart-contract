@@ -16,6 +16,7 @@ transaction(did: String, keyId: String, publicKey: String, signatureAlgorithm: U
     execute {
         let didPrefixLength = VerifiableDataView.DIDPredix.length
         let removedPrefixDID = did.slice(from: didPrefixLength, upTo: did.length)
+        
         let didVaultAuthRef = self.didVaultAuthCap.borrow()!
         let verificationKey = publicKey.decodeHex()
         let verificationMethodType = signatureAlgorithm
@@ -27,7 +28,7 @@ transaction(did: String, keyId: String, publicKey: String, signatureAlgorithm: U
         )
         log("Added new verification method to DID: ".concat(did))
 
-        let methodId = did.concat("#".concat(keyId))
+        let methodId = removedPrefixDID.concat("#".concat(keyId))
         didVaultAuthRef.addVerificationRelationshipsForDID(
             did: removedPrefixDID, 
             authentication: nil, 
