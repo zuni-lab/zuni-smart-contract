@@ -39,12 +39,10 @@ pub contract VerifiableDataRegistry {
 
     pub struct RevocableVC {
         pub let id: String
-        pub let holderDID: String
         pub var status: VCStatus
 
-        init(id: String, holderDID: String, status: VCStatus) {
+        init(id: String, status: VCStatus) {
             self.id = id
-            self.holderDID = holderDID
             self.status = status
         }
 
@@ -64,13 +62,12 @@ pub contract VerifiableDataRegistry {
             self.revocableVC = {}
         }
 
-        pub fun issueRevocableVC(id: String, holderDID: String) {
+        pub fun issueRevocableVC(id: String) {
             if self.revocableVC[id] != nil {
                 panic("Revocable VC already exists")
             }
             let revocableVC = RevocableVC(
                 id: id,
-                holderDID: holderDID,
                 status: VCStatus.Issued
             )
             self.revocableVC[id] = revocableVC
@@ -133,7 +130,7 @@ pub contract VerifiableDataRegistry {
     }
 
     pub resource interface RevocableVCVaultOwner  {
-        pub fun issueRevocableVC(issuerAddress: Address, issuerDID: String, id: String, holderDID: String)
+        pub fun issueRevocableVC(issuerAddress: Address, issuerDID: String, id: String)
         
         pub fun revokeRevocableVC(issuerAddress: Address, issuerDID: String, id: String)
     }
@@ -369,12 +366,7 @@ pub contract VerifiableDataRegistry {
             self.revocableVCListByDID = {}
         }
 
-        pub fun issueRevocableVC(
-            issuerAddress: Address,
-            issuerDID: String,
-            id: String,
-            holderDID: String
-        ) {
+        pub fun issueRevocableVC(issuerAddress: Address, issuerDID: String, id: String) {
             let account = getAccount(issuerAddress)
             let didVaultCapability = account.getCapability<&{VerifiableDataRegistry.DIDRepresentation}>(VerifiableDataRegistry.DIDVaultPublicPath)
             let didVaultRef = didVaultCapability.borrow()
@@ -392,10 +384,9 @@ pub contract VerifiableDataRegistry {
                 )
                 self.revocableVCListByDID[issuerDID] = revocableVCs
             }
-            self.revocableVCListByDID[issuerDID]?.issueRevocableVC(
-                id: id,
-                holderDID: holderDID
-            )
+            self.revocableVCListByDID[issuerDID]?.issueRevocableVC(id: id)
+
+            emit RevocableVCIssued(issuerDID: issuerDID, id: id)
         }
 
         pub fun revokeRevocableVC(
@@ -420,6 +411,8 @@ pub contract VerifiableDataRegistry {
             self.revocableVCListByDID[issuerDID]?.revokeRevocableVC(
                 id: id,
             )
+            
+            emit RevocableVCRevoked(issuerDID: issuerDID, id: id)
         }
 
         pub fun getRevocableVC(issuerDID: String, id: String): RevocableVC? {

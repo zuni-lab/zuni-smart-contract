@@ -14,7 +14,7 @@ transaction(did: String, keyId: String, publicKey: String, signatureAlgorithm: U
     }
 
     execute {
-        let didPrefixLength = VerifiableDataView.DIDPredix.length
+        let didPrefixLength = VerifiableDataView.DIDPrefix.length
         let removedPrefixDID = did.slice(from: didPrefixLength, upTo: did.length)
         
         let didVaultAuthRef = self.didVaultAuthCap.borrow()!

@@ -1,7 +1,7 @@
 import "VerifiableDataRegistry"
 
 pub contract VerifiableDataView {
-    pub let DIDPredix: String;
+    pub let DIDPrefix: String;
     pub let ControllerPrefix: String;
 
     pub struct VerificationMethodView {
@@ -12,7 +12,7 @@ pub contract VerifiableDataView {
 
 
         init(verificationMethod: VerifiableDataRegistry.VerificationMethod) {
-            self.id = VerifiableDataView.DIDPredix.concat(verificationMethod.id)
+            self.id = VerifiableDataView.DIDPrefix.concat(verificationMethod.id)
             self.controller = VerifiableDataView.ControllerPrefix.concat(verificationMethod.controller)
             self.publicKey = String.encodeHex(verificationMethod.publicKey)   
 
@@ -41,7 +41,7 @@ pub contract VerifiableDataView {
         pub let keyAgreement: [String]
 
         init(didDocument: &VerifiableDataRegistry.DIDDocument) {
-            let didPrefix = VerifiableDataView.DIDPredix
+            let didPrefix = VerifiableDataView.DIDPrefix
             let controllerPrefix = VerifiableDataView.ControllerPrefix
 
             self.id = didPrefix.concat(didDocument.id)
@@ -78,13 +78,10 @@ pub contract VerifiableDataView {
 
     pub struct RevocableVCView {
         pub let id: String
-        pub let holderDID: String
         pub let status: String
-
 
         init(revocableVC: VerifiableDataRegistry.RevocableVC) {
             self.id = revocableVC.id
-            self.holderDID = revocableVC.holderDID
 
             switch revocableVC.status {
                 case VerifiableDataRegistry.VCStatus.Issued:
@@ -109,7 +106,7 @@ pub contract VerifiableDataView {
         let dids = didVaultRef!.getDIDs()
         let formattedDID: [String] = []
         for did in dids {
-            formattedDID.append(self.DIDPredix.concat(did))
+            formattedDID.append(self.DIDPrefix.concat(did))
         }
         return formattedDID
     }
@@ -122,7 +119,7 @@ pub contract VerifiableDataView {
             return nil
         }
 
-        let didPrefixLength = self.DIDPredix.length
+        let didPrefixLength = self.DIDPrefix.length
         let removedPrefixDID = did.slice(from: didPrefixLength, upTo: did.length)
         let didDocument = didVaultRef!.resolveDIDDocument(did: removedPrefixDID)
         if didDocument == nil {
@@ -142,7 +139,7 @@ pub contract VerifiableDataView {
             return []
         }
 
-        let didPrefixLength = self.DIDPredix.length
+        let didPrefixLength = self.DIDPrefix.length
         let removedPrefixDID = did.slice(from: didPrefixLength, upTo: did.length)
         let revocableVCList = revocableVCVaultRef!.getRevocableVCList(issuerDID: removedPrefixDID)
         let formattedRevocableVCList: [VerifiableDataView.RevocableVCView] = []
@@ -161,7 +158,7 @@ pub contract VerifiableDataView {
             return nil
         }
 
-        let didPrefixLength = self.DIDPredix.length
+        let didPrefixLength = self.DIDPrefix.length
         let removedPrefixDID = did.slice(from: didPrefixLength, upTo: did.length)
         let revocableVC = revocableVCVaultRef!.getRevocableVC(issuerDID: removedPrefixDID, id: id)
         
@@ -174,7 +171,7 @@ pub contract VerifiableDataView {
     }
 
     init() {
-        self.DIDPredix = "did:flow:"
+        self.DIDPrefix = "did:flow:"
         self.ControllerPrefix = "did:flow:wallet:"
     }
 }

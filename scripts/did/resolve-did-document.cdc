@@ -2,7 +2,7 @@ import "VerifiableDataRegistry"
 import "VerifiableDataView"
 
 pub fun main(did: String): VerifiableDataView.DIDDocumentView? {
-    let didPrefixLength = VerifiableDataView.DIDPredix.length
+    let didPrefixLength = VerifiableDataView.DIDPrefix.length
     let removedPrefixDID = did.slice(from: didPrefixLength, upTo: did.length)
     let address = VerifiableDataRegistry.mapDIDToWallet[removedPrefixDID]
     if address == nil {

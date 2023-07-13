@@ -21,11 +21,11 @@ flow transactions send transactions/did/add-keys-for-auth.cdc $DID $KEY_ID $PUB_
 flow scripts execute scripts/did/get-dids.cdc $ISSUER_ADDRESS
 flow scripts execute scripts/did/resolve-did-document.cdc $ISSUER_DID
 
-# flow transactions send transactions/vc/create-empty-vc-vault.cdc
-# flow transactions send transactions/vc/issue-vc.cdc $ISSUER_DID $VC_ID $HOLDER_DID
+flow transactions send transactions/vc/create-empty-vc-vault.cdc
+flow transactions send transactions/vc/issue-vc.cdc $ISSUER_DID $VC_ID
 
-# flow scripts execute scripts/vc/get-vc-list-by-did.cdc $ISSUER_ADDRESS $ISSUER_DID
-# flow scripts execute scripts/vc/get-vc.cdc $ISSUER_ADDRESS $ISSUER_DID $VC_ID
+flow scripts execute scripts/vc/get-vc-list-by-did.cdc $ISSUER_ADDRESS $ISSUER_DID
+flow scripts execute scripts/vc/get-vc.cdc $ISSUER_ADDRESS $ISSUER_DID $VC_ID
 
-# flow transactions send transactions/vc/revoke-vc.cdc $ISSUER_DID $VC_ID
-# flow scripts execute scripts/vc/get-vc.cdc $ISSUER_ADDRESS $ISSUER_DID $VC_ID
+flow transactions send transactions/vc/revoke-vc.cdc $ISSUER_DID $VC_ID
+flow scripts execute scripts/vc/get-vc.cdc $ISSUER_ADDRESS $ISSUER_DID $VC_ID
